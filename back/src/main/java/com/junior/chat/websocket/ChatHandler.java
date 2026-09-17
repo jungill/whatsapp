@@ -20,7 +20,7 @@ public class ChatHandler extends TextWebSocketHandler {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception { // enregistre la connexion WebSocket pour l'utilisateur en fait une liste de sessions WebSocket ouvertes
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception { // enregistre la connexion WebSocket pour l'utilisateur et en fait une liste de sessions WebSocket ouvertes
         String userId = userId(session);
         if (userId == null || userId.isBlank()) {
             session.close(CloseStatus.POLICY_VIOLATION.withReason("userId manquant"));
@@ -34,7 +34,7 @@ public class ChatHandler extends TextWebSocketHandler {
         ChatMessage in = mapper.readValue(message.getPayload(), ChatMessage.class);
         ChatMessage out = new ChatMessage(in.id(), userId(session), in.to(), in.content());
 
-        WebSocketSession target = sessions.get(in.to());
+        WebSocketSession target = sessions.get(in.to()); // récupère la session WebSocket de l'utilisateur destinataire
         if (target != null && target.isOpen()) {
             target.sendMessage(new TextMessage(mapper.writeValueAsString(out)));
         }
