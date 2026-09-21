@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "ChatApplication debug (8081)",
+      "request": "launch",
+      "mainClass": "com.junior.chat.ChatApplication",
+      "projectName": "demo",
+      "vmArgs": "-Dserver.port=8081"
+    }
+  ]
+}

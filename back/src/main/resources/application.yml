@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/chat
+    username: chat
+    password: chat
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
