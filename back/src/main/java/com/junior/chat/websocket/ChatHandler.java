@@ -1,7 +1,6 @@
 package com.junior.chat.websocket;
 
 import tools.jackson.databind.ObjectMapper; // tools.jackson.databind.ObjectMapper si Spring Boot 4
-import com.junior.chat.model.ChatMessage;
 import com.junior.chat.model.Envelope;
 import com.junior.chat.model.MessageEntity;
 import com.junior.chat.model.MessageStatus;
@@ -34,8 +33,10 @@ public class ChatHandler extends TextWebSocketHandler {
 
     // enregistre l'utilisateur (déjà connecté) pour qu'il puisse recevoir des messages via WebSocket
     @Override
+    // lors d'une commande websocat
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String userId = userId(session);
+        //log.info("Nouvelle connexion WebSocket pour l'utilisateur {}", userId);
         if (userId == null || userId.isBlank()) {
             session.close(CloseStatus.POLICY_VIOLATION.withReason("userId manquant"));
             return;
@@ -44,6 +45,8 @@ public class ChatHandler extends TextWebSocketHandler {
                 new ConcurrentWebSocketSessionDecorator(session, 5000, 65536);
         sessions.put(userId, decorated);
 
+        // tous les messages simplement envoyés sont maintenant délivrés et 
+        // le statut est mis à jour dans la bdd
         for (MessageEntity pending : messageService.pendingFor(userId)) {
             send(decorated, Envelope.Message.of(pending));
             messageService.markDelivered(pending.getId());
@@ -51,13 +54,20 @@ public class ChatHandler extends TextWebSocketHandler {
     }
 
     @Override
+    // gère les messages reçus par le serveur
+    // le msg est d'abord sauvegardé dans la bdd, puis envoyé à la personne concernée
+    // enfin, un accusé de réception est envoyé à l'expéditeur du msg pour lui indiquer que le msg a bien été reçu par le serveur
     protected void handleTextMessage(WebSocketSession session, TextMessage frame)
             throws Exception {
+        // lire le msg reçu par le serveur et le convertir en objet Java
         Envelope.Message in = mapper.readValue(frame.getPayload(), Envelope.Message.class);
+        // récupérer le nom de la personne ayant envoyée le sg au serveur
         String sender = userId(session);
 
+        // sauvegarder le msg dans la bdd
         MessageEntity saved =
                 messageService.persist(in.id(), sender, in.to(), in.content());
+        // envoyer un accusé de réception au client qui a envoyé le msg
         send(sessions.get(sender), Envelope.Ack.of(saved.getId(), MessageStatus.SENT));
 
         WebSocketSession target = sessions.get(in.to());
@@ -68,6 +78,8 @@ public class ChatHandler extends TextWebSocketHandler {
         }
     }
 
+    // envoie le msg à la personne concernée
+    // n'a aucune interraction avec la bdd, c'est juste une écriture dans le terminal
     private void send(WebSocketSession session, Envelope payload) {
         if (session == null || !session.isOpen()) return;
         try {
@@ -86,15 +98,6 @@ public class ChatHandler extends TextWebSocketHandler {
     }
 
     private String userId(WebSocketSession session) {
-        // regarder l'évolution de session du début à la fin de cette fonction
-        log.info("session.getUri() --> " + session.getUri());
-        log.info("UriComponentsBuilder.fromUri(session.getUri()) --> " + UriComponentsBuilder.fromUri(session.getUri()));
-        log.info("UriComponentsBuilder.fromUri(session.getUri()).build() --> " + UriComponentsBuilder.fromUri(session.getUri()).build());
-        log.info("UriComponentsBuilder.fromUri(session.getUri()).build().getQueryParams() --> " + UriComponentsBuilder.fromUri(session.getUri()).build().getQueryParams());
-        log.info("UriComponentsBuilder.fromUri(session.getUri()).build().getQueryParams().getFirst(\"userId\") --> " + UriComponentsBuilder.fromUri(session.getUri()).build().getQueryParams().getFirst("userId"));
-        return UriComponentsBuilder.fromUri(session.getUri())
-                .build()
-                .getQueryParams()
-                .getFirst("userId");
+        return (String) session.getAttributes().get("userId");
     }
 }
