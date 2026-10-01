@@ -9,4 +9,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, String> 
 
     List<MessageEntity> findByRecipientAndStatusOrderByCreatedAtAsc(
             String recipient, MessageStatus status);
+
+    List<MessageEntity> findBySenderAndStatusOrderByCreatedAtAsc(
+        String sender, MessageStatus status);
 }

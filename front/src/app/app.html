@@ -1,0 +1,53 @@
+<div class="app" *ngIf="view === 'login'">
+  <h2>Connexion</h2>
+  <div class="form">
+    <input [(ngModel)]="username" placeholder="Identifiant" />
+    <input [(ngModel)]="password" type="password" placeholder="Mot de passe"
+           (keyup.enter)="doLogin()" />
+    <button class="primary" (click)="doLogin()">Se connecter</button>
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <p class="switch">
+      Pas encore de compte ?
+      <a (click)="goTo('register')">Creer un compte</a>
+    </p>
+  </div>
+</div>
+
+<div class="app" *ngIf="view === 'register'">
+  <h2>Inscription</h2>
+  <div class="form">
+    <input [(ngModel)]="username" placeholder="Identifiant" />
+    <input [(ngModel)]="password" type="password" placeholder="Mot de passe" />
+    <input [(ngModel)]="passwordConfirm" type="password"
+           placeholder="Confirmer le mot de passe" (keyup.enter)="doRegister()" />
+    <button class="primary" (click)="doRegister()">Creer mon compte</button>
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <p class="switch">
+      Deja inscrit ?
+      <a (click)="goTo('login')">Se connecter</a>
+    </p>
+  </div>
+</div>
+
+<div class="app" *ngIf="view === 'chat'">
+  <div class="header">
+    <h2>{{ username }}</h2>
+    <button (click)="logout()">Se deconnecter</button>
+  </div>
+
+  <input [(ngModel)]="recipient" placeholder="Destinataire" />
+
+  <div class="messages">
+    <p class="empty" *ngIf="messages.length === 0">Aucun message pour le moment.</p>
+    <div *ngFor="let m of messages" class="bubble" [class.mine]="m.mine">
+      <span class="author">{{ m.from }}</span>
+      <span class="content">{{ m.content }}</span>
+      <span class="tick" *ngIf="m.mine">{{ tick(m.status) }}</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <input [(ngModel)]="draft" (keyup.enter)="send()" placeholder="Message" />
+    <button (click)="send()">Envoyer</button>
+  </div>
+</div>

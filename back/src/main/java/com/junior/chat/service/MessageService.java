@@ -32,4 +32,15 @@ public class MessageService {
         return repository.findByRecipientAndStatusOrderByCreatedAtAsc(
                 userId, MessageStatus.SENT);
     }
+
+    @Transactional(readOnly = true)
+    public List<MessageEntity> deliveredNotNotified(String sender) {
+        return repository.findBySenderAndStatusOrderByCreatedAtAsc(
+                sender, MessageStatus.DELIVERED);
+    }
+
+    @Transactional
+    public void markDeliveryNotified(String messageId) {
+        repository.findById(messageId).ifPresent(MessageEntity::markDeliveryNotified);
+    }
 }

@@ -36,7 +36,6 @@ public class ChatHandler extends TextWebSocketHandler {
     // lors d'une commande websocat
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String userId = userId(session);
-        //log.info("Nouvelle connexion WebSocket pour l'utilisateur {}", userId);
         if (userId == null || userId.isBlank()) {
             session.close(CloseStatus.POLICY_VIOLATION.withReason("userId manquant"));
             return;
@@ -45,11 +44,25 @@ public class ChatHandler extends TextWebSocketHandler {
                 new ConcurrentWebSocketSessionDecorator(session, 5000, 65536);
         sessions.put(userId, decorated);
 
-        // tous les messages simplement envoyés sont maintenant délivrés et 
-        // le statut est mis à jour dans la bdd
+        // 1. les messages qu'il n'a pas reçus
         for (MessageEntity pending : messageService.pendingFor(userId)) {
             send(decorated, Envelope.Message.of(pending));
             messageService.markDelivered(pending.getId());
+            notifyDelivered(pending);
+        }
+
+        // 2. les accusés qu'il n'a pas reçus, pour ses propres messages
+        for (MessageEntity delivered : messageService.deliveredNotNotified(userId)) {
+            send(decorated, Envelope.Ack.of(delivered.getId(), MessageStatus.DELIVERED));
+            messageService.markDeliveryNotified(delivered.getId());
+        }
+    }
+
+    private void notifyDelivered(MessageEntity message) {
+        WebSocketSession sender = sessions.get(message.getSender());
+        if (sender != null && sender.isOpen()) {
+            send(sender, Envelope.Ack.of(message.getId(), MessageStatus.DELIVERED));
+            messageService.markDeliveryNotified(message.getId());
         }
     }
 
@@ -74,7 +87,7 @@ public class ChatHandler extends TextWebSocketHandler {
         if (target != null && target.isOpen()) {
             send(target, Envelope.Message.of(saved));
             messageService.markDelivered(saved.getId());
-            send(sessions.get(sender), Envelope.Ack.of(saved.getId(), MessageStatus.DELIVERED));
+            notifyDelivered(saved);
         }
     }
 

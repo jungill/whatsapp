@@ -46,4 +46,5 @@ public class MessageEntity {
     public Instant getCreatedAt() { return createdAt; }
 
     public void markDelivered() { this.status = MessageStatus.DELIVERED; }
+    public void markDeliveryNotified() { this.status = MessageStatus.DELIVERY_NOTIFIED; }
 }
