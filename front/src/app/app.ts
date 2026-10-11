@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -34,7 +34,7 @@ export class App {
 
   private subscription?: Subscription;
 
-  constructor(private chat: Chat) {}
+  constructor(private chat: Chat, private cdr: ChangeDetectorRef) {}
 
   goTo(view: View) {
     this.view = view;
@@ -51,7 +51,10 @@ export class App {
     }
     this.chat.login(this.username, this.password).subscribe({
       next: (res) => this.onToken(res.token),
-      error: () => (this.error = 'Identifiants invalides')
+      error: () => {
+        this.error = 'Identifiants invalides';
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -67,11 +70,13 @@ export class App {
     }
     this.chat.register(this.username, this.password).subscribe({
       next: (res) => this.onToken(res.token),
-      error: (err) =>
-        (this.error =
+      error: (err) => {
+        this.error =
           err.status === 409
             ? 'Cet identifiant est deja pris'
-            : 'Inscription impossible')
+            : 'Inscription impossible';
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -95,6 +100,7 @@ export class App {
     this.password = '';
     this.passwordConfirm = '';
     this.view = 'chat';
+    this.cdr.markForCheck();
   }
 
   private handle(e: Envelope) {
@@ -109,6 +115,7 @@ export class App {
       const target = this.messages.find((m) => m.id === e.messageId);
       if (target) target.status = e.status;
     }
+    this.cdr.markForCheck();
   }
 
   send() {
@@ -127,5 +134,21 @@ export class App {
     if (status === 'DELIVERED' || status === 'DELIVERY_NOTIFIED') return '✓✓';
     if (status === 'SENT') return '✓';
     return '';
+  }
+
+  openConversation() {
+    if (!this.recipient.trim()) return;
+    this.messages = [];
+    this.chat.history(this.recipient).subscribe({
+      next: (list) =>
+        (this.messages = list.map((e) => ({
+          id: e.id!,
+          from: e.from!,
+          content: e.content!,
+          status: e.status,
+          mine: e.from === this.username
+        }))),
+      error: () => (this.error = 'Impossible de charger la conversation')
+    });
   }
 }

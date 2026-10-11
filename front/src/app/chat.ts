@@ -33,12 +33,22 @@ export class Chat {
     );
   }
 
+  private token?: string;
+
   connect(token: string) {
     this.disconnect();
+    this.token = token;
     this.socket = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
     this.socket.onmessage = (event) =>
       this.incoming.next(JSON.parse(event.data) as Envelope);
     this.socket.onclose = () => console.warn('WebSocket ferme');
+  }
+
+  history(peer: string) {
+    return this.http.get<Envelope[]>(
+      `http://localhost:8080/conversations/${peer}/messages`,
+      { headers: { Authorization: `Bearer ${this.token}` } }
+    );
   }
 
   send(to: string, content: string): string {

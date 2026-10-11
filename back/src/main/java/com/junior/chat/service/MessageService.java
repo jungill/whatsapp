@@ -43,4 +43,9 @@ public class MessageService {
     public void markDeliveryNotified(String messageId) {
         repository.findById(messageId).ifPresent(MessageEntity::markDeliveryNotified);
     }
+
+    @Transactional(readOnly = true)
+    public List<MessageEntity> conversation(String a, String b) {
+        return repository.findConversation(a, b);
+    }
 }
