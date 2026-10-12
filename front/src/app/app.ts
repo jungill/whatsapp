@@ -1,8 +1,9 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
 import { Chat, Envelope } from './chat';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError } from 'rxjs';
+import { OnInit, OnDestroy } from '@angular/core';
 
 interface DisplayedMessage {
   id: string;
@@ -34,7 +35,42 @@ export class App {
 
   private subscription?: Subscription;
 
+  private recipientChanged = new Subject<string>();
+  private historySubscription?: Subscription;
+
   constructor(private chat: Chat, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() {
+    this.historySubscription = this.recipientChanged
+      .pipe(
+        debounceTime(100),
+        distinctUntilChanged(),
+        switchMap((peer) => {
+          if (!peer.trim()) return of([]);
+          return this.chat.history(peer).pipe(catchError(() => of([])));
+        })
+      )
+      .subscribe((list) => {
+        this.messages = list.map((e) => ({
+          id: e.id!,
+          from: e.from!,
+          content: e.content!,
+          status: e.status,
+          mine: e.from === this.username
+        }));
+        this.cdr.markForCheck();
+      });
+  }
+
+  ngOnDestroy() {
+    this.historySubscription?.unsubscribe();
+    this.subscription?.unsubscribe();
+  }
+
+  onRecipientChange(value: string) {
+    this.messages = [];
+    this.recipientChanged.next(value);
+  }
 
   goTo(view: View) {
     this.view = view;

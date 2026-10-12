@@ -36,8 +36,7 @@
 
   <div class="row">
     <input [(ngModel)]="recipient" placeholder="Destinataire"
-           (keyup.enter)="openConversation()" />
-    <button (click)="openConversation()">Ouvrir</button>
+           (ngModelChange)="onRecipientChange($event)" />
   </div>
 
   <div class="messages">
