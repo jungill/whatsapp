@@ -1,8 +1,16 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Chat, Envelope } from './chat';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError } from 'rxjs';
+import {
+  Subject,
+  Subscription,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  of,
+  catchError,
+} from 'rxjs';
 import { OnInit, OnDestroy } from '@angular/core';
 
 interface DisplayedMessage {
@@ -10,6 +18,7 @@ interface DisplayedMessage {
   from: string;
   content: string;
   status?: string;
+  sequence?: number;
   mine: boolean;
 }
 
@@ -18,9 +27,9 @@ type View = 'login' | 'register' | 'chat';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrl: './app.css',
 })
 export class App {
   view: View = 'login';
@@ -38,7 +47,10 @@ export class App {
   private recipientChanged = new Subject<string>();
   private historySubscription?: Subscription;
 
-  constructor(private chat: Chat, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private chat: Chat,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit() {
     this.historySubscription = this.recipientChanged
@@ -48,7 +60,7 @@ export class App {
         switchMap((peer) => {
           if (!peer.trim()) return of([]);
           return this.chat.history(peer).pipe(catchError(() => of([])));
-        })
+        }),
       )
       .subscribe((list) => {
         this.messages = list.map((e) => ({
@@ -56,7 +68,7 @@ export class App {
           from: e.from!,
           content: e.content!,
           status: e.status,
-          mine: e.from === this.username
+          mine: e.from === this.username,
         }));
         this.cdr.markForCheck();
       });
@@ -90,7 +102,7 @@ export class App {
       error: () => {
         this.error = 'Identifiants invalides';
         this.cdr.markForCheck();
-      }
+      },
     });
   }
 
@@ -108,11 +120,9 @@ export class App {
       next: (res) => this.onToken(res.token),
       error: (err) => {
         this.error =
-          err.status === 409
-            ? 'Cet identifiant est deja pris'
-            : 'Inscription impossible';
+          err.status === 409 ? 'Cet identifiant est deja pris' : 'Inscription impossible';
         this.cdr.markForCheck();
-      }
+      },
     });
   }
 
@@ -141,11 +151,12 @@ export class App {
 
   private handle(e: Envelope) {
     if (e.type === 'message') {
-      this.messages.push({
+      this.insert({
         id: e.id!,
         from: e.from!,
         content: e.content!,
-        mine: false
+        sequence: e.sequence,
+        mine: false,
       });
     } else if (e.type === 'ack') {
       const target = this.messages.find((m) => m.id === e.messageId);
@@ -157,13 +168,18 @@ export class App {
   send() {
     if (!this.draft.trim() || !this.recipient.trim()) return;
     const id = this.chat.send(this.recipient, this.draft);
-    this.messages.push({
+    this.insert({
       id,
       from: this.username,
       content: this.draft,
-      mine: true
+      mine: true,
     });
     this.draft = '';
+  }
+
+  private insert(m: DisplayedMessage) {
+    this.messages.push(m);
+    this.messages.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
   }
 
   tick(status?: string): string {
@@ -182,9 +198,9 @@ export class App {
           from: e.from!,
           content: e.content!,
           status: e.status,
-          mine: e.from === this.username
+          mine: e.from === this.username,
         }))),
-      error: () => (this.error = 'Impossible de charger la conversation')
+      error: () => (this.error = 'Impossible de charger la conversation'),
     });
   }
 }

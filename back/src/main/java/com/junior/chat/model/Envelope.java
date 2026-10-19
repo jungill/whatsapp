@@ -2,11 +2,10 @@ package com.junior.chat.model;
 
 public sealed interface Envelope {
 
-    record Message(String type, String id, String from, String to, String content)
-            implements Envelope {
+    record Message(String type, String id, String from, String to, String content, long sequence) implements Envelope {
         public static Message of(MessageEntity e) {
             return new Message("message", e.getId(), e.getSender(),
-                    e.getRecipient(), e.getContent());
+                    e.getRecipient(), e.getContent(), e.getSequence());
         }
     }
 

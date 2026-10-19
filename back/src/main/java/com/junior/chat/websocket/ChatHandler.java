@@ -2,11 +2,10 @@ package com.junior.chat.websocket;
 
 import tools.jackson.databind.ObjectMapper; // tools.jackson.databind.ObjectMapper si Spring Boot 4
 import com.junior.chat.model.Envelope;
+import com.junior.chat.model.IncomingMessage;
 import com.junior.chat.model.MessageEntity;
 import com.junior.chat.model.MessageStatus;
 import com.junior.chat.service.MessageService;
-
-import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -14,18 +13,21 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class ChatHandler extends TextWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper mapper = new ObjectMapper();
     private final MessageService messageService;
+
+    private static final Logger log = LoggerFactory.getLogger(ChatHandler.class);
 
     public ChatHandler(MessageService messageService) {
         this.messageService = messageService;
@@ -73,8 +75,9 @@ public class ChatHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage frame)
             throws Exception {
         // lire le msg reçu par le serveur et le convertir en objet Java
-        Envelope.Message in = mapper.readValue(frame.getPayload(), Envelope.Message.class);
-        // récupérer le nom de la personne ayant envoyée le sg au serveur
+        log.info("\n \n \n Message reçu : {}", frame.getPayload());
+        IncomingMessage in = mapper.readValue(frame.getPayload(), IncomingMessage.class);
+        // récupérer le nom de la personne ayant envoyée le msg au serveur
         String sender = userId(session);
 
         // sauvegarder le msg dans la bdd
@@ -98,7 +101,6 @@ public class ChatHandler extends TextWebSocketHandler {
         try {
             session.sendMessage(new TextMessage(mapper.writeValueAsString(payload)));
         } catch (Exception e) {
-            log.warn("Échec d'envoi vers la session {}", session.getId(), e);
         }
     }
 

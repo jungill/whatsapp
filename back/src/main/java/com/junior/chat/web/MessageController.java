@@ -17,8 +17,12 @@ public class MessageController {
     }
 
     @GetMapping("/conversations/{peer}/messages")
-    public List<Envelope.Message> history(@PathVariable String peer, Authentication auth) {
-        return messages.conversation(auth.getName(), peer)
+    public List<Envelope.Message> history(
+            @PathVariable String peer,
+            @RequestParam(required = false) Long before,
+            @RequestParam(defaultValue = "50") int limit,
+            Authentication auth) {
+        return messages.conversation(auth.getName(), peer, before, Math.min(limit, 100))
                 .stream()
                 .map(Envelope.Message::of)
                 .toList();

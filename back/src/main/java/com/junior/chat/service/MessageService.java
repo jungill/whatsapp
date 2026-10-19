@@ -1,7 +1,10 @@
 package com.junior.chat.service;
 
 import com.junior.chat.model.*;
+import com.junior.chat.repository.ConversationCounterRepository;
 import com.junior.chat.repository.MessageRepository;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -10,16 +13,23 @@ import java.util.List;
 public class MessageService {
 
     private final MessageRepository repository;
+    private final ConversationCounterRepository counters;
 
-    public MessageService(MessageRepository repository) {
+    public MessageService(MessageRepository repository, ConversationCounterRepository counters) {
         this.repository = repository;
+        this.counters = counters;
     }
 
     @Transactional
     public MessageEntity persist(String id, String sender, String recipient, String content) {
-        return repository.findById(id)
-                .orElseGet(() -> repository.save(
-                        new MessageEntity(id, sender, recipient, content)));
+        return repository.findById(id).orElseGet(() -> {
+            String conversationId = ConversationId.of(sender, recipient);
+            ConversationCounter counter = counters.findById(conversationId)
+                    .orElseGet(() -> counters.save(new ConversationCounter(conversationId)));
+            long sequence = counter.next();
+            return repository.save(new MessageEntity(
+                    id, sender, recipient, content, conversationId, sequence));
+        });
     }
 
     @Transactional
@@ -45,7 +55,12 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<MessageEntity> conversation(String a, String b) {
-        return repository.findConversation(a, b);
+    public List<MessageEntity> conversation(String a, String b, Long before, int limit) {
+        String id = ConversationId.of(a, b);
+        PageRequest page = PageRequest.of(0, limit);
+        List<MessageEntity> result = (before == null)
+                ? repository.findByConversationIdOrderBySequenceDesc(id, page)
+                : repository.findByConversationIdAndSequenceLessThanOrderBySequenceDesc(id, before, page);
+        return result.reversed();
     }
 }

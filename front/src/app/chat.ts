@@ -10,6 +10,7 @@ export interface Envelope {
   content?: string;
   messageId?: string;
   status?: 'SENT' | 'DELIVERED' | 'READ';
+  sequence?: number;
 }
 
 @Injectable({ providedIn: 'root' })
