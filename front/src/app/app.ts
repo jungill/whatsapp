@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
-
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, Envelope } from './chat';
 import {
@@ -11,7 +11,6 @@ import {
   of,
   catchError,
 } from 'rxjs';
-import { OnInit, OnDestroy } from '@angular/core';
 
 interface DisplayedMessage {
   id: string;
@@ -20,6 +19,7 @@ interface DisplayedMessage {
   status?: string;
   sequence?: number;
   mine: boolean;
+  createdAt?: string;
 }
 
 type View = 'login' | 'register' | 'chat';
@@ -27,11 +27,11 @@ type View = 'login' | 'register' | 'chat';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
+export class App implements OnInit, OnDestroy {
   view: View = 'login';
 
   username = '';
@@ -68,6 +68,8 @@ export class App {
           from: e.from!,
           content: e.content!,
           status: e.status,
+          sequence: e.sequence,
+          createdAt: e.createdAt,
           mine: e.from === this.username,
         }));
         this.cdr.markForCheck();
@@ -157,6 +159,7 @@ export class App {
         content: e.content!,
         sequence: e.sequence,
         mine: false,
+        createdAt: e.createdAt,
       });
     } else if (e.type === 'ack') {
       const target = this.messages.find((m) => m.id === e.messageId);
@@ -172,6 +175,7 @@ export class App {
       id,
       from: this.username,
       content: this.draft,
+      createdAt: new Date().toISOString(),
       mine: true,
     });
     this.draft = '';
@@ -179,7 +183,9 @@ export class App {
 
   private insert(m: DisplayedMessage) {
     this.messages.push(m);
-    this.messages.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    this.messages.sort(
+      (a, b) => (a.sequence ?? Infinity) - (b.sequence ?? Infinity),
+    );
   }
 
   tick(status?: string): string {
@@ -198,6 +204,8 @@ export class App {
           from: e.from!,
           content: e.content!,
           status: e.status,
+          sequence: e.sequence,
+          createdAt: e.createdAt,
           mine: e.from === this.username,
         }))),
       error: () => (this.error = 'Impossible de charger la conversation'),

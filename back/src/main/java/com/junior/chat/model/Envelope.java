@@ -1,11 +1,12 @@
 package com.junior.chat.model;
+import java.time.Instant;
 
 public sealed interface Envelope {
 
-    record Message(String type, String id, String from, String to, String content, long sequence) implements Envelope {
+    record Message(String type, String id, String from, String to, String content, long sequence, Instant createdAt) implements Envelope {
         public static Message of(MessageEntity e) {
             return new Message("message", e.getId(), e.getSender(),
-                    e.getRecipient(), e.getContent(), e.getSequence());
+                    e.getRecipient(), e.getContent(), e.getSequence(), e.getCreatedAt());
         }
     }
 

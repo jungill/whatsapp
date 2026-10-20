@@ -204,10 +204,20 @@ button.primary:hover {
   word-break: break-word;
 }
 
-.tick {
+.meta {
   float: right;
-  margin: 6px 0 -2px 8px;
+  margin: 6px 0 -2px 10px;
   font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.time {
+  color: #667781;
+}
+
+.tick {
+  margin-left: 3px;
   color: #53bdeb;
   letter-spacing: -1px;
 }
