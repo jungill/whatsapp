@@ -63,4 +63,11 @@ public class MessageService {
                 : repository.findByConversationIdAndSequenceLessThanOrderBySequenceDesc(id, before, page);
         return result.reversed();
     }
+
+    @Transactional(readOnly = true)
+    public List<ConversationSummary> conversationsOf(String user) {
+        return repository.findLastMessagesOf(user).stream()
+                .map(m -> ConversationSummary.of(m, user))
+                .toList();
+    }
 }

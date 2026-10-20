@@ -1,5 +1,6 @@
 package com.junior.chat.web;
 
+import com.junior.chat.model.ConversationSummary;
 import com.junior.chat.model.Envelope;
 import com.junior.chat.service.MessageService;
 import org.springframework.security.core.Authentication;
@@ -26,5 +27,10 @@ public class MessageController {
                 .stream()
                 .map(Envelope.Message::of)
                 .toList();
+    }
+
+    @GetMapping("/conversations")
+    public List<ConversationSummary> conversations(Authentication auth) {
+        return messages.conversationsOf(auth.getName());
     }
 }

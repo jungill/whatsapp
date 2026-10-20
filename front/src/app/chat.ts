@@ -14,6 +14,12 @@ export interface Envelope {
   createdAt?: string;
 }
 
+export interface ConversationSummary {
+  peer: string;
+  lastMessage: string;
+  lastAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class Chat {
   private socket?: WebSocket;
@@ -62,5 +68,12 @@ export class Chat {
   disconnect() {
     this.socket?.close();
     this.socket = undefined;
+  }
+
+  conversations() {
+    return this.http.get<ConversationSummary[]>(
+      'http://localhost:8080/conversations',
+      { headers: { Authorization: `Bearer ${this.token}` } }
+    );
   }
 }

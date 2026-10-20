@@ -34,7 +34,7 @@
       }
       <p class="switch">
         Deja inscrit ?
-        <a (click)="goTo('login')" (keyup.enter)="goTo('login')">Se connecter</a>
+        <a (click)="goTo('login')">Se connecter</a>
       </p>
     </form>
   </div>
@@ -43,33 +43,56 @@
 @if (view === 'chat') {
   <div class="app">
     <div class="header">
-      <h2>{{ username }}</h2>
-      <button (click)="logout()">Se deconnecter</button>
+      <button class="burger" (click)="toggleMenu()" aria-label="Menu">☰</button>
+      <h2>{{ recipient || 'Aucune conversation' }}</h2>
     </div>
-    <div class="row">
-      <input
-        [(ngModel)]="recipient"
-        placeholder="Destinataire"
-        (ngModelChange)="onRecipientChange($event)"
-      />
-    </div>
+
+    @if (menuOpen) {
+      <div class="backdrop" (click)="menuOpen = false"></div>
+      <nav class="drawer">
+        <div class="drawer-header">{{ username }}</div>
+
+        <form class="new-conv" (ngSubmit)="startConversation()">
+          <input [(ngModel)]="newPeer" name="newPeer" placeholder="Nouveau contact" />
+          <button type="submit">+</button>
+        </form>
+
+        <ul class="conv-list">
+          @for (c of conversations; track c.peer) {
+            <li [class.active]="c.peer === recipient" (click)="openConversation(c.peer)">
+              <div class="conv-top">
+                <span class="conv-peer">{{ c.peer }}</span>
+                <span class="conv-time">{{ c.lastAt | date:'HH:mm' }}</span>
+              </div>
+              <span class="conv-last">{{ c.lastMessage }}</span>
+            </li>
+          } @empty {
+            <li class="conv-empty">Aucune conversation</li>
+          }
+        </ul>
+
+        <button class="logout" (click)="logout()">Se deconnecter</button>
+      </nav>
+    }
+
     <div class="messages">
       @if (messages.length === 0) {
         <p class="empty">Aucun message pour le moment.</p>
       }
       @for (m of messages; track m.id) {
-      <div class="bubble" [class.mine]="m.mine">
-        <span class="author">{{ m.from }}</span>
-        <span class="content">{{ m.content }}</span>
-        <span class="meta">
-          <span class="time">{{ m.createdAt | date:'HH:mm' }}</span>
-          @if (m.mine) {
-            <span class="tick">{{ tick(m.status) }}</span>
-          }
-        </span>
-      </div>
-    }
+        <div class="bubble" [class.mine]="m.mine">
+          <span class="author">{{ m.from }}</span>
+          <span class="content">{{ m.content }}</span>
+          <span class="meta">
+            <span class="time">{{ m.createdAt | date:'HH:mm' }}</span>
+            @if (m.mine) {
+              <span class="tick">{{ tick(m.status) }}</span>
+            }
+          </span>
+        </div>
+      }
     </div>
+
     <div class="row">
       <input [(ngModel)]="draft" (keyup.enter)="send()" placeholder="Message" />
       <button (click)="send()">Envoyer</button>

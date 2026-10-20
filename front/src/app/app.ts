@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Chat, Envelope } from './chat';
+import { Chat, Envelope, ConversationSummary } from './chat';
 import {
   Subject,
   Subscription,
@@ -41,6 +41,11 @@ export class App implements OnInit, OnDestroy {
   draft = '';
   error = '';
   messages: DisplayedMessage[] = [];
+
+  // NOUVEAU : état du menu
+  menuOpen = false;
+  conversations: ConversationSummary[] = [];
+  newPeer = '';
 
   private subscription?: Subscription;
 
@@ -139,6 +144,11 @@ export class App implements OnInit, OnDestroy {
     this.password = '';
     this.passwordConfirm = '';
     this.error = '';
+    // NOUVEAU
+    this.menuOpen = false;
+    this.conversations = [];
+    this.newPeer = '';
+    this.recipientChanged.next(''); // réinitialise distinctUntilChanged
     this.view = 'login';
   }
 
@@ -153,6 +163,8 @@ export class App implements OnInit, OnDestroy {
 
   private handle(e: Envelope) {
     if (e.type === 'message') {
+      // NOUVEAU : ignorer les messages d'une autre conversation
+      if (e.from !== this.recipient) return;
       this.insert({
         id: e.id!,
         from: e.from!,
@@ -194,21 +206,35 @@ export class App implements OnInit, OnDestroy {
     return '';
   }
 
-  openConversation() {
-    if (!this.recipient.trim()) return;
-    this.messages = [];
-    this.chat.history(this.recipient).subscribe({
-      next: (list) =>
-        (this.messages = list.map((e) => ({
-          id: e.id!,
-          from: e.from!,
-          content: e.content!,
-          status: e.status,
-          sequence: e.sequence,
-          createdAt: e.createdAt,
-          mine: e.from === this.username,
-        }))),
-      error: () => (this.error = 'Impossible de charger la conversation'),
+  // NOUVEAU : menu
+
+  toggleMenu() {
+    this.menuOpen = !this.menuOpen;
+    if (this.menuOpen) this.loadConversations();
+  }
+
+  private loadConversations() {
+    this.chat.conversations().subscribe({
+      next: (list) => {
+        this.conversations = list;
+        this.cdr.markForCheck();
+      },
+      error: () => (this.conversations = []),
     });
+  }
+
+  // REMPLACE l'ancien openConversation()
+  openConversation(peer: string) {
+    this.menuOpen = false;
+    if (peer === this.recipient) return; // déjà ouverte : rien à recharger
+    this.recipient = peer;
+    this.onRecipientChange(peer);
+  }
+
+  startConversation() {
+    const peer = this.newPeer.trim();
+    if (!peer || peer === this.username) return;
+    this.newPeer = '';
+    this.openConversation(peer);
   }
 }
